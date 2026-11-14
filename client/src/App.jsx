@@ -155,7 +155,7 @@ function App() {
   };
 
   // Date selector: Sunday through Saturday.
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
 
   const weekDates = Array.from({ length: 7 }, (_, index) =>
     addDays(weekStart, index),
@@ -164,7 +164,7 @@ function App() {
   // Tasks belonging to the selected week.
   const tasksThisWeek = tasks.filter((task) =>
     isSameWeek(new Date(task.dueDate), selectedDate, {
-      weekStartsOn: 0,
+      weekStartsOn: 1,
     }),
   );
 
