@@ -30,7 +30,7 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [search, setSearch] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date());
-
+  const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [form, setForm] = useState(emptyForm);
