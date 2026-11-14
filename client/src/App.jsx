@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Plus,
   Search,
@@ -29,6 +29,9 @@ const emptyForm = {
 
 function App() {
   const [tasks, setTasks] = useState([]);
+  const [swipedTaskId, setSwipedTaskId] = useState(null);
+  const touchStart = useRef({ x: 0, y: 0 });
+
   const [search, setSearch] = useState("");
   const [expandedWeek, setExpandedWeek] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -58,6 +61,7 @@ function App() {
     setEditingTask(null);
     setForm(emptyForm);
     setShowModal(true);
+    setSwipedTaskId(null);
   };
 
   const openEditModal = (task) => {
@@ -71,6 +75,7 @@ function App() {
     });
 
     setShowModal(true);
+    setSwipedTaskId(null);
   };
 
   const handleSubmit = async (e) => {
@@ -102,6 +107,7 @@ function App() {
 
     try {
       await deleteTask(id);
+      setSwipedTaskId(null);
       await fetchTasks();
     } catch (err) {
       setError("Unable to delete task.");
@@ -114,9 +120,32 @@ function App() {
         status: task.status === "Completed" ? "In Progress" : "Completed",
       });
 
+      setSwipedTaskId(null);
       await fetchTasks();
     } catch (err) {
       setError("Unable to update task status.");
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    touchStart.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  };
+
+  const handleTouchEnd = (e, taskId) => {
+    const deltaX = e.changedTouches[0].clientX - touchStart.current.x;
+
+    const deltaY = e.changedTouches[0].clientY - touchStart.current.y;
+
+    // Only respond to horizontal swipes, not normal scrolling.
+    if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+    if (deltaX < -50) {
+      setSwipedTaskId(taskId);
+    } else if (deltaX > 50) {
+      setSwipedTaskId(null);
     }
   };
 
@@ -184,7 +213,10 @@ function App() {
           <Search className="absolute left-4 top-3.5 text-gray-400" size={19} />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setSwipedTaskId(null);
+            }}
             placeholder="Search tasks by title or description..."
             className="w-full bg-white border border-gray-200 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-primary"
           />
@@ -210,7 +242,6 @@ function App() {
               ).length;
 
               const open = week.tasks.length - completed;
-
               const expanded = expandedWeek === week.key;
 
               return (
@@ -219,7 +250,10 @@ function App() {
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
                 >
                   <button
-                    onClick={() => setExpandedWeek(expanded ? null : week.key)}
+                    onClick={() => {
+                      setExpandedWeek(expanded ? null : week.key);
+                      setSwipedTaskId(null);
+                    }}
                     className="w-full p-5 text-left hover:bg-gray-50 transition"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -247,84 +281,113 @@ function App() {
 
                   {expanded && (
                     <div className="border-t border-gray-100 divide-y divide-gray-100">
-                      {week.tasks.map((task) => (
-                        <div
-                          key={task._id}
-                          className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                        >
-                          <div className="flex items-start gap-3">
-                            <button
-                              onClick={() => handleStatus(task)}
-                              title="Change task status"
-                              className="mt-1"
-                            >
-                              <CheckCircle2
-                                size={21}
-                                className={
-                                  task.status === "Completed"
-                                    ? "text-green-500"
-                                    : "text-gray-300"
-                                }
-                              />
-                            </button>
+                      {week.tasks.map((task) => {
+                        const isSwiped = swipedTaskId === task._id;
 
-                            <div>
-                              <h4
-                                className={`font-semibold ${
-                                  task.status === "Completed"
-                                    ? "line-through text-gray-400"
-                                    : "text-gray-800"
-                                }`}
-                              >
-                                {task.title}
-                              </h4>
-
-                              {task.description && (
-                                <p className="text-sm text-gray-500 mt-1">
-                                  {task.description}
-                                </p>
-                              )}
-
-                              <p className="text-xs text-gray-400 mt-2">
-                                {format(
-                                  new Date(task.dueDate),
-                                  "dd MMM yyyy, hh:mm a",
-                                )}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`text-xs px-3 py-1 rounded-full ${
-                                task.priority === "High"
-                                  ? "bg-red-50 text-red-600"
-                                  : task.priority === "Medium"
-                                    ? "bg-yellow-50 text-yellow-700"
-                                    : "bg-blue-50 text-blue-600"
-                              }`}
-                            >
-                              {task.priority}
-                            </span>
-
-                            <button
-                              onClick={() => openEditModal(task)}
-                              className="text-gray-500 hover:text-primary"
-                              title="Edit task"
-                            >
-                              <Pencil size={18} />
-                            </button>
-
+                        return (
+                          <div
+                            key={task._id}
+                            className="relative overflow-hidden"
+                          >
+                            {/* Red Delete action behind the task */}
                             <button
                               onClick={() => handleDelete(task._id)}
-                              className="text-gray-500 hover:text-red-500"
-                              title="Delete task"
+                              aria-label={`Delete ${task.title}`}
+                              className="absolute right-0 top-0 bottom-0 w-[88px] bg-red-600 text-white flex flex-col items-center justify-center gap-1 sm:hidden"
                             >
-                              <Trash2 size={18} />
+                              <Trash2 size={21} />
+                              <span className="text-xs font-semibold">
+                                Delete
+                              </span>
                             </button>
+
+                            {/* Swipeable task row */}
+                            <div
+                              onTouchStart={handleTouchStart}
+                              onTouchEnd={(e) => handleTouchEnd(e, task._id)}
+                              style={{
+                                transform: isSwiped
+                                  ? "translateX(-88px)"
+                                  : "translateX(0)",
+                              }}
+                              className="relative bg-white p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-transform duration-200 ease-out touch-pan-y"
+                            >
+                              <div className="flex items-start gap-3">
+                                <button
+                                  onClick={() => handleStatus(task)}
+                                  title="Change task status"
+                                  className="mt-1"
+                                >
+                                  <CheckCircle2
+                                    size={21}
+                                    className={
+                                      task.status === "Completed"
+                                        ? "text-green-500"
+                                        : "text-gray-300"
+                                    }
+                                  />
+                                </button>
+
+                                <div>
+                                  <h4
+                                    className={`font-semibold ${
+                                      task.status === "Completed"
+                                        ? "line-through text-gray-400"
+                                        : "text-gray-800"
+                                    }`}
+                                  >
+                                    {task.title}
+                                  </h4>
+
+                                  {task.description && (
+                                    <p className="text-sm text-gray-500 mt-1">
+                                      {task.description}
+                                    </p>
+                                  )}
+
+                                  <p className="text-xs text-gray-400 mt-2">
+                                    {format(
+                                      new Date(task.dueDate),
+                                      "dd MMM yyyy, hh:mm a",
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className={`text-xs px-3 py-1 rounded-full ${
+                                    task.priority === "High"
+                                      ? "bg-red-50 text-red-600"
+                                      : task.priority === "Medium"
+                                        ? "bg-yellow-50 text-yellow-700"
+                                        : "bg-blue-50 text-blue-600"
+                                  }`}
+                                >
+                                  {task.priority}
+                                </span>
+
+                                <button
+                                  onClick={() => openEditModal(task)}
+                                  className="text-gray-500 hover:text-primary"
+                                  title="Edit task"
+                                >
+                                  <Pencil size={18} />
+                                </button>
+
+                                {/* Desktop delete icon */}
+                                <button
+                                  onClick={() => handleDelete(task._id)}
+                                  className="hidden sm:inline-flex text-gray-500 hover:text-red-500"
+                                  title="Delete task"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </section>
@@ -374,13 +437,23 @@ function App() {
                 required
                 type="datetime-local"
                 value={form.dueDate}
-                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    dueDate: e.target.value,
+                  })
+                }
                 className="w-full border rounded-xl p-3 outline-none focus:border-primary"
               />
 
               <select
                 value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    priority: e.target.value,
+                  })
+                }
                 className="w-full border rounded-xl p-3 outline-none focus:border-primary"
               >
                 <option value="Low">Low Priority</option>
