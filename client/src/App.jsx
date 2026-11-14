@@ -3,13 +3,14 @@ import {
   Plus,
   Search,
   CheckCircle2,
-  Clock,
+  Circle,
   Trash2,
   Pencil,
-  CalendarDays,
   X,
+  Settings,
+  Bell,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, addDays, startOfWeek, isSameDay, isSameWeek } from "date-fns";
 
 import {
   getTasks,
@@ -17,8 +18,6 @@ import {
   updateTask,
   deleteTask,
 } from "./services/taskServices";
-
-import { groupTasksByWeek } from "./utils/dateUtils";
 
 const emptyForm = {
   title: "",
@@ -29,16 +28,18 @@ const emptyForm = {
 
 function App() {
   const [tasks, setTasks] = useState([]);
-  const [swipedTaskId, setSwipedTaskId] = useState(null);
-  const touchStart = useRef({ x: 0, y: 0 });
-
   const [search, setSearch] = useState("");
-  const [expandedWeek, setExpandedWeek] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [form, setForm] = useState(emptyForm);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [swipedTaskId, setSwipedTaskId] = useState(null);
+  const touchStart = useRef({ x: 0, y: 0 });
 
   const fetchTasks = async () => {
     try {
@@ -71,7 +72,7 @@ function App() {
       title: task.title,
       description: task.description || "",
       dueDate: format(new Date(task.dueDate), "yyyy-MM-dd'T'HH:mm"),
-      priority: task.priority,
+      priority: task.priority || "Medium",
     });
 
     setShowModal(true);
@@ -136,10 +137,8 @@ function App() {
 
   const handleTouchEnd = (e, taskId) => {
     const deltaX = e.changedTouches[0].clientX - touchStart.current.x;
-
     const deltaY = e.changedTouches[0].clientY - touchStart.current.y;
 
-    // Only respond to horizontal swipes, not normal scrolling.
     if (Math.abs(deltaX) < Math.abs(deltaY)) return;
 
     if (deltaX < -50) {
@@ -149,321 +148,425 @@ function App() {
     }
   };
 
-  const weeks = groupTasksByWeek(tasks);
+  // Date selector: Sunday through Saturday.
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
 
-  const completedCount = tasks.filter(
+  const weekDates = Array.from({ length: 7 }, (_, index) =>
+    addDays(weekStart, index),
+  );
+
+  // Tasks belonging to the selected week.
+  const tasksThisWeek = tasks.filter((task) =>
+    isSameWeek(new Date(task.dueDate), selectedDate, {
+      weekStartsOn: 0,
+    }),
+  );
+
+  const completedThisWeek = tasksThisWeek.filter(
     (task) => task.status === "Completed",
-  ).length;
+  );
 
-  const openCount = tasks.length - completedCount;
+  const pendingThisWeek = tasksThisWeek.filter(
+    (task) => task.status !== "Completed",
+  );
+
+  const progress =
+    tasksThisWeek.length === 0
+      ? 0
+      : Math.round((completedThisWeek.length / tasksThisWeek.length) * 100);
+
+  // Search shows matching tasks across all dates.
+  // Otherwise, show tasks for the selected date.
+  const visibleTasks = search.trim()
+    ? tasks
+    : tasks.filter((task) => isSameDay(new Date(task.dueDate), selectedDate));
+
+  const sortedTasks = [...visibleTasks].sort(
+    (a, b) => new Date(a.dueDate) - new Date(b.dueDate),
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-5 py-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">TaskFlow</h1>
-            <p className="text-sm text-gray-500">
-              Organize your week, achieve your goals.
-            </p>
-          </div>
-
+    <div className="min-h-screen bg-[#f6f7fc] text-[#20243a] pb-28">
+      <main className="max-w-3xl mx-auto px-5 pt-7">
+        {/* Top icons */}
+        <div className="flex items-center justify-between mb-7">
           <button
-            onClick={openCreateModal}
-            className="bg-primary text-white px-4 py-3 rounded-xl flex items-center gap-2 hover:opacity-90"
+            type="button"
+            className="text-[#263b8f]"
+            aria-label="Settings"
           >
-            <Plus size={18} />
-            <span className="hidden sm:inline">Add Task</span>
+            <Settings size={24} />
           </button>
-        </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-5 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold">My Tasks</h2>
-          <p className="text-gray-500 mt-1">
-            Manage and track your weekly progress.
-          </p>
-        </div>
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              onClick={() => document.getElementById("task-search")?.focus()}
+              aria-label="Search tasks"
+              className="text-[#263b8f]"
+            >
+              <Search size={24} />
+            </button>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <SummaryCard
-            label="Total Tasks"
-            value={tasks.length}
-            icon={<CalendarDays />}
-            color="text-primary"
-          />
-
-          <SummaryCard
-            label="Open Tasks"
-            value={openCount}
-            icon={<Clock />}
-            color="text-orange-500"
-          />
-
-          <SummaryCard
-            label="Completed"
-            value={completedCount}
-            icon={<CheckCircle2 />}
-            color="text-green-600"
-          />
+            <button
+              type="button"
+              aria-label="Notifications"
+              className="text-[#263b8f]"
+            >
+              <Bell size={24} />
+            </button>
+          </div>
         </div>
 
-        <div className="relative mb-6">
-          <Search className="absolute left-4 top-3.5 text-gray-400" size={19} />
+        {/* Search */}
+        <div className="relative mb-7">
+          <Search
+            className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
+            size={22}
+          />
+
           <input
+            id="task-search"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               setSwipedTaskId(null);
             }}
             placeholder="Search tasks by title or description..."
-            className="w-full bg-white border border-gray-200 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-primary"
+            className="w-full h-[60px] rounded-2xl bg-white border border-gray-200 pl-14 pr-5 text-base outline-none focus:border-[#4964eb] shadow-sm"
           />
         </div>
 
-        {error && <p className="mb-4 text-red-600 text-sm">{error}</p>}
+        {/* Date selector */}
+        <div className="grid grid-cols-7 gap-1 mb-8">
+          {weekDates.map((date) => {
+            const active = isSameDay(date, selectedDate);
 
-        {loading ? (
-          <p className="text-center py-12 text-gray-500">Loading tasks...</p>
-        ) : weeks.length === 0 ? (
-          <div className="bg-white rounded-2xl p-10 text-center">
-            <CalendarDays size={40} className="mx-auto text-gray-300 mb-3" />
-            <h3 className="font-semibold text-lg">No tasks found</h3>
-            <p className="text-gray-500 text-sm mt-1">
-              Add a task to get started.
-            </p>
+            return (
+              <button
+                key={date.toISOString()}
+                onClick={() => {
+                  setSelectedDate(date);
+                  setSwipedTaskId(null);
+                }}
+                className={`flex flex-col items-center justify-center py-3 rounded-lg transition ${
+                  active
+                    ? "bg-[#4964eb] text-white shadow-md"
+                    : "text-gray-400 hover:bg-white"
+                }`}
+              >
+                <span className="text-xs">{format(date, "EEE")}</span>
+
+                <span className="text-lg font-semibold mt-1">
+                  {format(date, "dd")}
+                </span>
+
+                {active && (
+                  <span className="w-1 h-1 rounded-full bg-white mt-1" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Weekly summary cards */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="bg-[#eef1ff] rounded-xl p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="bg-[#dce3ff] text-[#354fbd] p-2 rounded-md">
+                <CheckCircle2 size={25} />
+              </div>
+
+              <span className="text-sm font-medium">Task Complete</span>
+            </div>
+
+            <div className="flex items-baseline gap-2 mt-3 ml-1">
+              <span className="text-3xl font-bold">
+                {completedThisWeek.length}
+              </span>
+              <span className="text-xs text-gray-500">This Week</span>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {weeks.map((week) => {
-              const completed = week.tasks.filter(
-                (task) => task.status === "Completed",
-              ).length;
 
-              const open = week.tasks.length - completed;
-              const expanded = expandedWeek === week.key;
+          <div className="bg-[#ffebed] rounded-xl p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="bg-[#ffd6da] text-[#c34c59] p-2 rounded-md">
+                <Circle size={25} />
+              </div>
 
-              return (
-                <section
-                  key={week.key}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
-                >
-                  <button
-                    onClick={() => {
-                      setExpandedWeek(expanded ? null : week.key);
-                      setSwipedTaskId(null);
-                    }}
-                    className="w-full p-5 text-left hover:bg-gray-50 transition"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-bold text-lg">
-                          {format(week.start, "dd MMM")} -{" "}
-                          {format(week.end, "dd MMM yyyy")}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {week.tasks.length} tasks this week
-                        </p>
-                      </div>
+              <span className="text-sm font-medium">Task Pending</span>
+            </div>
 
-                      <div className="flex gap-3">
-                        <span className="bg-orange-50 text-orange-600 px-3 py-2 rounded-lg text-sm">
-                          {open} Open
-                        </span>
-
-                        <span className="bg-green-50 text-green-600 px-3 py-2 rounded-lg text-sm">
-                          {completed} Completed
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-
-                  {expanded && (
-                    <div className="border-t border-gray-100 divide-y divide-gray-100">
-                      {week.tasks.map((task) => {
-                        const isSwiped = swipedTaskId === task._id;
-
-                        return (
-                          <div
-                            key={task._id}
-                            className="relative overflow-hidden"
-                          >
-                            {/* Red Delete action behind the task */}
-                            <button
-                              onClick={() => handleDelete(task._id)}
-                              aria-label={`Delete ${task.title}`}
-                              className="absolute right-0 top-0 bottom-0 w-[88px] bg-red-600 text-white flex flex-col items-center justify-center gap-1 sm:hidden"
-                            >
-                              <Trash2 size={21} />
-                              <span className="text-xs font-semibold">
-                                Delete
-                              </span>
-                            </button>
-
-                            {/* Swipeable task row */}
-                            <div
-                              onTouchStart={handleTouchStart}
-                              onTouchEnd={(e) => handleTouchEnd(e, task._id)}
-                              style={{
-                                transform: isSwiped
-                                  ? "translateX(-88px)"
-                                  : "translateX(0)",
-                              }}
-                              className="relative bg-white p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-transform duration-200 ease-out touch-pan-y"
-                            >
-                              <div className="flex items-start gap-3">
-                                <button
-                                  onClick={() => handleStatus(task)}
-                                  title="Change task status"
-                                  className="mt-1"
-                                >
-                                  <CheckCircle2
-                                    size={21}
-                                    className={
-                                      task.status === "Completed"
-                                        ? "text-green-500"
-                                        : "text-gray-300"
-                                    }
-                                  />
-                                </button>
-
-                                <div>
-                                  <h4
-                                    className={`font-semibold ${
-                                      task.status === "Completed"
-                                        ? "line-through text-gray-400"
-                                        : "text-gray-800"
-                                    }`}
-                                  >
-                                    {task.title}
-                                  </h4>
-
-                                  {task.description && (
-                                    <p className="text-sm text-gray-500 mt-1">
-                                      {task.description}
-                                    </p>
-                                  )}
-
-                                  <p className="text-xs text-gray-400 mt-2">
-                                    {format(
-                                      new Date(task.dueDate),
-                                      "dd MMM yyyy, hh:mm a",
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className={`text-xs px-3 py-1 rounded-full ${
-                                    task.priority === "High"
-                                      ? "bg-red-50 text-red-600"
-                                      : task.priority === "Medium"
-                                        ? "bg-yellow-50 text-yellow-700"
-                                        : "bg-blue-50 text-blue-600"
-                                  }`}
-                                >
-                                  {task.priority}
-                                </span>
-
-                                <button
-                                  onClick={() => openEditModal(task)}
-                                  className="text-gray-500 hover:text-primary"
-                                  title="Edit task"
-                                >
-                                  <Pencil size={18} />
-                                </button>
-
-                                {/* Desktop delete icon */}
-                                <button
-                                  onClick={() => handleDelete(task._id)}
-                                  className="hidden sm:inline-flex text-gray-500 hover:text-red-500"
-                                  title="Delete task"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
+            <div className="flex items-baseline gap-2 mt-3 ml-1">
+              <span className="text-3xl font-bold">
+                {pendingThisWeek.length}
+              </span>
+              <span className="text-xs text-gray-500">This Week</span>
+            </div>
           </div>
-        )}
-      </main>
+        </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="font-bold text-xl">
-                {editingTask ? "Edit Task" : "Create Task"}
+        {/* Weekly progress */}
+        <section className="mb-9">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-bold">Weekly Progress</h2>
+            <span className="text-sm font-semibold text-[#4964eb]">
+              {progress}%
+            </span>
+          </div>
+
+          <div className="w-full h-4 bg-[#dedffc] rounded-sm overflow-hidden">
+            <div
+              className="h-full bg-[#293f9d] transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </section>
+
+        {/* Tasks list */}
+        <section>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-bold">
+                {search.trim() ? "Search Results" : "Tasks Today"}
               </h2>
 
-              <button onClick={() => setShowModal(false)}>
-                <X />
+              {!search.trim() && (
+                <p className="text-sm text-gray-400 mt-1">
+                  {format(selectedDate, "EEEE, dd MMMM")}
+                </p>
+              )}
+            </div>
+
+            <span className="text-sm font-semibold text-[#4964eb]">
+              {sortedTasks.length} Tasks
+            </span>
+          </div>
+
+          {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+          {loading ? (
+            <p className="text-center py-12 text-gray-500">Loading tasks...</p>
+          ) : sortedTasks.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
+              <CheckCircle2 size={38} className="mx-auto text-gray-300 mb-3" />
+
+              <h3 className="font-semibold text-lg">
+                {search.trim() ? "No matching tasks" : "No tasks for this day"}
+              </h3>
+
+              <p className="text-sm text-gray-400 mt-2">
+                {search.trim()
+                  ? "Try searching with another keyword."
+                  : "Tap the + button to create a new task."}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              {sortedTasks.map((task) => {
+                const isSwiped = swipedTaskId === task._id;
+                const completed = task.status === "Completed";
+
+                return (
+                  <div
+                    key={task._id}
+                    className="relative overflow-hidden border-b border-gray-100 last:border-b-0"
+                  >
+                    {/* Mobile swipe delete */}
+                    <button
+                      onClick={() => handleDelete(task._id)}
+                      aria-label={`Delete ${task.title}`}
+                      className="absolute right-0 top-0 bottom-0 w-[88px] bg-red-600 text-white flex flex-col items-center justify-center gap-1 sm:hidden"
+                    >
+                      <Trash2 size={21} />
+                      <span className="text-xs font-semibold">Delete</span>
+                    </button>
+
+                    <div
+                      onTouchStart={handleTouchStart}
+                      onTouchEnd={(e) => handleTouchEnd(e, task._id)}
+                      style={{
+                        transform: isSwiped
+                          ? "translateX(-88px)"
+                          : "translateX(0)",
+                      }}
+                      className="relative bg-white px-5 py-5 flex items-center gap-4 transition-transform duration-200 ease-out touch-pan-y"
+                    >
+                      <button
+                        onClick={() => handleStatus(task)}
+                        aria-label="Change task status"
+                        className="shrink-0"
+                      >
+                        {completed ? (
+                          <CheckCircle2 size={27} className="text-[#4964eb]" />
+                        ) : (
+                          <Circle size={27} className="text-[#8b9acb]" />
+                        )}
+                      </button>
+
+                      <div className="min-w-0 flex-1">
+                        <h3
+                          className={`font-semibold text-base break-words ${
+                            completed
+                              ? "line-through text-gray-400"
+                              : "text-[#20243a]"
+                          }`}
+                        >
+                          {task.title}
+                        </h3>
+
+                        {task.description && (
+                          <p className="text-sm text-gray-500 mt-1 break-words">
+                            {task.description}
+                          </p>
+                        )}
+
+                        <p className="text-xs text-gray-400 mt-2">
+                          {format(
+                            new Date(task.dueDate),
+                            "dd MMM yyyy, hh:mm a",
+                          )}
+                        </p>
+
+                        <div className="flex items-center gap-3 mt-3">
+                          <span
+                            className={`text-xs px-3 py-1 rounded-full ${
+                              task.priority === "High"
+                                ? "bg-red-50 text-red-600"
+                                : task.priority === "Medium"
+                                  ? "bg-yellow-50 text-yellow-700"
+                                  : "bg-blue-50 text-blue-600"
+                            }`}
+                          >
+                            {task.priority || "Medium"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="hidden sm:flex items-center gap-3 shrink-0">
+                        <button
+                          onClick={() => openEditModal(task)}
+                          className="text-gray-400 hover:text-[#4964eb]"
+                          aria-label="Edit task"
+                        >
+                          <Pencil size={20} />
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(task._id)}
+                          className="text-gray-400 hover:text-red-500"
+                          aria-label="Delete task"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </main>
+
+      {/* Floating add button */}
+      <button
+        onClick={openCreateModal}
+        aria-label="Add new task"
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-[76px] h-[76px] rounded-full bg-[#4964eb] text-white shadow-xl flex items-center justify-center hover:bg-[#354fce] active:scale-95 transition"
+      >
+        <Plus size={36} strokeWidth={1.8} />
+      </button>
+
+      {/* Create / Edit modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center sm:p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl p-6 w-full max-w-lg max-h-[92vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-7">
+              <h2 className="font-bold text-2xl">
+                {editingTask ? "Edit Task" : "Add New Task"}
+              </h2>
+
+              <button
+                onClick={() => setShowModal(false)}
+                aria-label="Close form"
+              >
+                <X size={24} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                required
-                maxLength={150}
-                placeholder="Task title"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full border rounded-xl p-3 outline-none focus:border-primary"
-              />
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">
+                  Task title
+                </label>
 
-              <textarea
-                placeholder="Description (optional)"
-                value={form.description}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    description: e.target.value,
-                  })
-                }
-                className="w-full border rounded-xl p-3 outline-none focus:border-primary"
-                rows={3}
-              />
+                <input
+                  required
+                  maxLength={150}
+                  placeholder="Enter task title"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
+                />
+              </div>
 
-              <input
-                required
-                type="datetime-local"
-                value={form.dueDate}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    dueDate: e.target.value,
-                  })
-                }
-                className="w-full border rounded-xl p-3 outline-none focus:border-primary"
-              />
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">
+                  Set Date and Time
+                </label>
 
-              <select
-                value={form.priority}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    priority: e.target.value,
-                  })
-                }
-                className="w-full border rounded-xl p-3 outline-none focus:border-primary"
-              >
-                <option value="Low">Low Priority</option>
-                <option value="Medium">Medium Priority</option>
-                <option value="High">High Priority</option>
-              </select>
+                <input
+                  required
+                  type="datetime-local"
+                  value={form.dueDate}
+                  onChange={(e) =>
+                    setForm({ ...form, dueDate: e.target.value })
+                  }
+                  className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">
+                  Description
+                </label>
+
+                <textarea
+                  placeholder="Add Description"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      description: e.target.value,
+                    })
+                  }
+                  rows={4}
+                  className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">
+                  Priority
+                </label>
+
+                <select
+                  value={form.priority}
+                  onChange={(e) =>
+                    setForm({ ...form, priority: e.target.value })
+                  }
+                  className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
+                >
+                  <option value="Low">Low Priority</option>
+                  <option value="Medium">Medium Priority</option>
+                  <option value="High">High Priority</option>
+                </select>
+              </div>
 
               <button
                 type="submit"
-                className="w-full bg-primary text-white rounded-xl p-3 font-semibold hover:opacity-90"
+                className="w-full bg-[#4964eb] text-white rounded-md p-4 font-semibold text-base hover:bg-[#354fce] transition"
               >
                 {editingTask ? "Save Changes" : "Create Task"}
               </button>
@@ -471,19 +574,6 @@ function App() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function SummaryCard({ label, value, icon, color }) {
-  return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{label}</p>
-        <span className={color}>{icon}</span>
-      </div>
-
-      <h3 className="text-3xl font-bold mt-3">{value}</h3>
     </div>
   );
 }
