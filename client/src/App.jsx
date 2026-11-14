@@ -449,10 +449,10 @@ function App() {
                         </div>
                       </div>
 
-                      <div className="hidden sm:flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-3 shrink-0">
                         <button
                           onClick={() => openEditModal(task)}
-                          className="text-gray-400 hover:text-[#4964eb]"
+                          className="text-[#4964eb] p-2"
                           aria-label="Edit task"
                         >
                           <Pencil size={20} />
@@ -460,7 +460,7 @@ function App() {
 
                         <button
                           onClick={() => handleDelete(task._id)}
-                          className="text-gray-400 hover:text-red-500"
+                          className="hidden sm:block text-gray-400 hover:text-red-500"
                           aria-label="Delete task"
                         >
                           <Trash2 size={20} />
