@@ -21,8 +21,9 @@ import {
 
 const emptyForm = {
   title: "",
+  date: "",
+  time: "",
   description: "",
-  dueDate: "",
   priority: "Medium",
 };
 
@@ -66,19 +67,21 @@ function App() {
   };
 
   const openEditModal = (task) => {
+    const taskDate = new Date(task.dueDate);
+
     setEditingTask(task);
 
     setForm({
       title: task.title,
+      date: format(taskDate, "yyyy-MM-dd"),
+      time: format(taskDate, "HH:mm"),
       description: task.description || "",
-      dueDate: format(new Date(task.dueDate), "yyyy-MM-dd'T'HH:mm"),
       priority: task.priority || "Medium",
     });
 
     setShowModal(true);
     setSwipedTaskId(null);
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -89,8 +92,10 @@ function App() {
       setError("");
 
       const payload = {
-        ...form,
-        dueDate: new Date(form.dueDate).toISOString(),
+        title: form.title,
+        description: form.description,
+        priority: form.priority,
+        dueDate: new Date(`${form.date}T${form.time}`).toISOString(),
       };
 
       if (editingTask) {
@@ -244,6 +249,7 @@ function App() {
         </div>
 
         {/* Date selector */}
+        {/* Date selector */}
         <div className="grid grid-cols-7 gap-1 mb-8">
           {weekDates.map((date) => {
             const active = isSameDay(date, selectedDate);
@@ -262,11 +268,9 @@ function App() {
                 }`}
               >
                 <span className="text-xs">{format(date, "EEE")}</span>
-
                 <span className="text-lg font-semibold mt-1">
                   {format(date, "dd")}
                 </span>
-
                 {active && (
                   <span className="w-1 h-1 rounded-full bg-white mt-1" />
                 )}
@@ -274,7 +278,6 @@ function App() {
             );
           })}
         </div>
-
         {/* Weekly summary cards */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-[#eef1ff] rounded-xl p-4 sm:p-5">
@@ -518,21 +521,28 @@ function App() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-500 mb-2">
-                  Set Date and Time
-                </label>
+                <label className="block text-sm text-gray-500 mb-2">Date</label>
 
                 <input
                   required
-                  type="datetime-local"
-                  value={form.dueDate}
-                  onChange={(e) =>
-                    setForm({ ...form, dueDate: e.target.value })
-                  }
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
                   className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
                 />
               </div>
 
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">Time</label>
+
+                <input
+                  required
+                  type="time"
+                  value={form.time}
+                  onChange={(e) => setForm({ ...form, time: e.target.value })}
+                  className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
+                />
+              </div>
               <div>
                 <label className="block text-sm text-gray-500 mb-2">
                   Description
