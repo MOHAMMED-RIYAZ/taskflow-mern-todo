@@ -82,7 +82,12 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (submitting) return;
+
     try {
+      setSubmitting(true);
+      setError("");
+
       const payload = {
         ...form,
         dueDate: new Date(form.dueDate).toISOString(),
@@ -100,9 +105,10 @@ function App() {
       await fetchTasks();
     } catch (err) {
       setError(err.response?.data?.message || "Something went wrong.");
+    } finally {
+      setSubmitting(false);
     }
   };
-
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this task?")) return;
 
@@ -566,9 +572,14 @@ function App() {
 
               <button
                 type="submit"
-                className="w-full bg-[#4964eb] text-white rounded-md p-4 font-semibold text-base hover:bg-[#354fce] transition"
+                disabled={submitting}
+                className="w-full bg-[#4964eb] text-white rounded-md p-4 font-semibold disabled:opacity-50"
               >
-                {editingTask ? "Save Changes" : "Create Task"}
+                {submitting
+                  ? "Saving..."
+                  : editingTask
+                    ? "Save Changes"
+                    : "Create Task"}
               </button>
             </form>
           </div>
