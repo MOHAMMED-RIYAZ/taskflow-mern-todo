@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
   Plus,
   Search,
   CheckCircle2,
@@ -35,6 +36,8 @@ function App() {
     () => localStorage.getItem("taskflowStarted") === "true",
   );
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -59,6 +62,11 @@ function App() {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    if (searchOpen) {
+      searchInputRef.current?.focus();
+    }
+  }, [searchOpen]);
 
   useEffect(() => {
     fetchTasks();
@@ -239,7 +247,7 @@ function App() {
           <div className="flex items-center gap-6">
             <button
               type="button"
-              onClick={() => document.getElementById("task-search")?.focus()}
+              onClick={() => setSearchOpen(true)}
               aria-label="Search tasks"
               className="text-[#263b8f]"
             >
