@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   Plus,
   Search,
   CheckCircle2,
@@ -13,7 +15,9 @@ import {
 } from "lucide-react";
 
 import { format, addDays, startOfWeek, isSameDay, isSameWeek } from "date-fns";
+
 import Welcome from "./Welcome";
+
 import {
   getTasks,
   createTask,
@@ -32,13 +36,17 @@ const emptyForm = {
 
 function App() {
   const [tasks, setTasks] = useState([]);
+
   const [hasStarted, setHasStarted] = useState(
     () => localStorage.getItem("taskflowStarted") === "true",
   );
+
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef(null);
+
   const [selectedDate, setSelectedDate] = useState(new Date());
+
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -53,7 +61,9 @@ function App() {
   const fetchTasks = async () => {
     try {
       setLoading(true);
+
       const data = await getTasks(search);
+
       setTasks(data);
       setError("");
     } catch (err) {
@@ -62,6 +72,7 @@ function App() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     if (searchOpen) {
       searchInputRef.current?.focus();
@@ -130,6 +141,7 @@ function App() {
       setShowModal(false);
       setEditingTask(null);
       setForm(emptyForm);
+
       await fetchTasks();
     } catch (err) {
       setError(err.response?.data?.message || "Something went wrong.");
@@ -143,7 +155,9 @@ function App() {
 
     try {
       await deleteTask(id);
+
       setSwipedTaskId(null);
+
       await fetchTasks();
     } catch (err) {
       setError("Unable to delete task.");
@@ -157,6 +171,7 @@ function App() {
       });
 
       setSwipedTaskId(null);
+
       await fetchTasks();
     } catch (err) {
       setError("Unable to update task status.");
@@ -182,6 +197,17 @@ function App() {
     } else if (deltaX > 50) {
       setSwipedTaskId(null);
     }
+  };
+
+  // Navigate between weeks
+  const goToPreviousWeek = () => {
+    setSelectedDate((current) => addDays(current, -7));
+    setSwipedTaskId(null);
+  };
+
+  const goToNextWeek = () => {
+    setSelectedDate((current) => addDays(current, 7));
+    setSwipedTaskId(null);
   };
 
   // Monday through Sunday
@@ -220,6 +246,7 @@ function App() {
   const sortedTasks = [...visibleTasks].sort(
     (a, b) => new Date(a.dueDate) - new Date(b.dueDate),
   );
+
   if (!hasStarted) {
     return (
       <Welcome
@@ -273,6 +300,7 @@ function App() {
 
           <input
             id="task-search"
+            ref={searchInputRef}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -281,6 +309,32 @@ function App() {
             placeholder="Search tasks by title or description..."
             className="w-full h-[60px] rounded-2xl bg-white border border-gray-200 pl-14 pr-5 text-base outline-none focus:border-[#4964eb] shadow-sm"
           />
+        </div>
+
+        {/* Week navigation */}
+        <div className="flex items-center justify-between mb-3">
+          <button
+            type="button"
+            onClick={goToPreviousWeek}
+            aria-label="Previous week"
+            className="p-2 rounded-lg hover:bg-white text-[#4964eb]"
+          >
+            <ChevronLeft size={24} />
+          </button>
+
+          <span className="font-semibold text-sm">
+            {format(weekStart, "dd MMM")} -{" "}
+            {format(addDays(weekStart, 6), "dd MMM yyyy")}
+          </span>
+
+          <button
+            type="button"
+            onClick={goToNextWeek}
+            aria-label="Next week"
+            className="p-2 rounded-lg hover:bg-white text-[#4964eb]"
+          >
+            <ChevronRight size={24} />
+          </button>
         </div>
 
         {/* Date selector */}
@@ -479,6 +533,7 @@ function App() {
                                 "hh:mm a",
                               )
                             : format(new Date(task.dueDate), "hh:mm a")}
+
                           {task.endTime &&
                             ` - ${format(
                               new Date(`2000-01-01T${task.endTime}`),
