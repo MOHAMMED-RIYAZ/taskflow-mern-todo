@@ -754,7 +754,7 @@ function App() {
                   ? "Saving..."
                   : editingTask
                     ? "Save Changes"
-                    : "Create Task"}
+                    : "Add Task"}
               </button>
             </form>
           </div>
