@@ -1,28 +1,29 @@
 # TaskFlow – MERN Stack To-Do Application
 
-A responsive task management application built using the MERN stack. TaskFlow helps users organize their tasks, manage deadlines, track progress, and stay productive.
+A responsive task management application built using the MERN stack. TaskFlow helps users organize their daily activities, manage deadlines, set priorities, and track task progress through a clean and intuitive interface.
 
 ## 🚀 Live Demo
 
-**Live Application:** https://remarkable-biscotti-be7c58.netlify.app/
-
-**Backend API:** https://taskflow-mern-todo.onrender.com
+- **Live Application:** https://remarkable-biscotti-be7c58.netlify.app/
+- **Backend API:** https://taskflow-mern-todo.onrender.com
+- **GitHub Repository:** https://github.com/MOHAMMED-RIYAZ/taskflow-mern-todo
 
 ## ✨ Features
 
-- Create, edit, and delete tasks.
-- Add task titles, descriptions, due dates, and times.
-- Set task priorities: Low, Medium, and High.
-- Track task status: In Progress and Completed.
-- Search tasks by title and description.
-- Organize tasks by week, starting Monday.
-- View weekly Open and Completed task counts.
-- Expand and collapse weekly task sections.
-- Responsive user interface for mobile, tablet, and desktop.
+- **Task Management:** Create, edit, and delete tasks.
+- **Task Details:** Add titles, descriptions, due dates, and times.
+- **Priority Management:** Assign Low, Medium, or High priority.
+- **Task Status:** Track tasks as In Progress or Completed.
+- **Search Functionality:** Search tasks by title and description.
+- **Weekly Organization:** Navigate between weeks and organize tasks from Monday to Sunday.
+- **Weekly Progress:** View weekly Open and Completed task counts.
+- **Task Filtering:** View tasks based on the selected date or search results.
+- **Swipe to Delete:** Delete tasks using the mobile-friendly swipe interaction.
+- **Responsive Design:** Optimized for mobile, tablet, and desktop screens.
 
 ## 🛠️ Tech Stack
 
-**Frontend**
+### Frontend
 
 - React.js
 - Vite
@@ -31,18 +32,18 @@ A responsive task management application built using the MERN stack. TaskFlow he
 - Lucide React
 - date-fns
 
-**Backend**
+### Backend
 
 - Node.js
 - Express.js
 - MongoDB
 - Mongoose
 
-**Deployment**
+### Deployment and Database
 
-- Netlify – Frontend
-- Render – Backend
-- MongoDB Atlas – Database
+- Netlify – Frontend Hosting
+- Render – Backend Hosting
+- MongoDB Atlas – Cloud Database
 
 ## 📁 Project Structure
 
@@ -66,6 +67,7 @@ todo-app/
 │   ├── server.js
 │   └── package.json
 │
+├── .gitignore
 └── README.md
 ```
 
@@ -73,47 +75,58 @@ todo-app/
 
 ### Prerequisites
 
+Make sure you have installed:
+
 - Node.js
 - npm
 - MongoDB Atlas account or local MongoDB instance
+- Git
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/MOHAMMED-RIYAZ/taskflow-mern-todo.git
 cd taskflow-mern-todo
 ```
 
-### 2. Configure the backend
+### 2. Configure the Backend
+
+Navigate to the server directory:
 
 ```bash
 cd server
 npm install
 ```
 
-Create a `.env` file inside the server folder:
+Create a `.env` file inside the `server` directory:
 
 ```env
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 ```
 
-Start the backend:
+Start the backend server:
 
 ```bash
 npm run dev
 ```
 
-### 3. Configure the frontend
+The backend will run at:
 
-Open another terminal:
+```text
+http://localhost:5000
+```
+
+### 3. Configure the Frontend
+
+Open a new terminal and navigate to the client directory:
 
 ```bash
 cd client
 npm install
 ```
 
-Create a `.env` file inside the client folder:
+Create a `.env` file inside the `client` directory:
 
 ```env
 VITE_API_URL=http://localhost:5000/api
@@ -125,29 +138,47 @@ Start the frontend:
 npm run dev
 ```
 
-Open the local URL displayed in your terminal.
+Open the local URL displayed in your terminal to access TaskFlow.
 
 ## 🔗 API Endpoints
 
-| Method | Endpoint         | Description                    |
-| ------ | ---------------- | ------------------------------ |
-| GET    | `/api/tasks`     | Get all tasks and search tasks |
-| POST   | `/api/tasks`     | Create a task                  |
-| PATCH  | `/api/tasks/:id` | Update a task                  |
-| DELETE | `/api/tasks/:id` | Delete a task                  |
+| Method | Endpoint         | Description                         |
+| ------ | ---------------- | ----------------------------------- |
+| GET    | `/api/tasks`     | Retrieve all tasks and search tasks |
+| POST   | `/api/tasks`     | Create a new task                   |
+| PATCH  | `/api/tasks/:id` | Update an existing task             |
+| DELETE | `/api/tasks/:id` | Delete a task                       |
+
+### Search Example
+
+```text
+GET /api/tasks?search=Java
+```
+
+Search supports matching task titles and descriptions.
 
 ## 🔐 Environment Variables
 
-Keep environment variables private. Never commit `.env` files, database credentials, or API secrets to GitHub.
+The application uses environment variables to manage configuration.
+
+**Backend (`server/.env`)**
+
+- `PORT` – Backend server port.
+- `MONGO_URI` – MongoDB connection string.
+
+**Frontend (`client/.env`)**
+
+- `VITE_API_URL` – Backend API base URL.
+
+Never commit `.env` files, database credentials, or sensitive configuration values to GitHub.
 
 ## 👨‍💻 Developer
 
 **Mohammed Riyaz**
 
-GitHub: https://github.com/MOHAMMED-RIYAZ
-
-Portfolio: https://riyaz-portfolio-eight.vercel.app
+- **GitHub:** https://github.com/MOHAMMED-RIYAZ
+- **Portfolio:** https://riyaz-portfolio-eight.vercel.app
 
 ---
 
-Built with the MERN stack.
+Built with ❤️ using the MERN Stack.
