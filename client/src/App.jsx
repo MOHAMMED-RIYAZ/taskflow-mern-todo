@@ -5,8 +5,8 @@ import {
   ChevronRight,
   Plus,
   Search,
-  CheckCircle2,
-  Circle,
+  Square,
+  CheckSquare,
   Trash2,
   Pencil,
   X,
@@ -510,9 +510,9 @@ function App() {
                         className="shrink-0"
                       >
                         {completed ? (
-                          <CheckCircle2 size={27} className="text-[#4964eb]" />
+                          <CheckSquare size={27} className="text-[#4964eb]" />
                         ) : (
-                          <Circle size={27} className="text-[#8b9acb]" />
+                          <Square size={27} className="text-[#8b9acb]" />
                         )}
                       </button>
 
