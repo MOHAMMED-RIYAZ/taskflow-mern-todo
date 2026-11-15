@@ -4,6 +4,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  CheckCircle2,
+  Circle,
   Search,
   Square,
   CheckSquare,
