@@ -3,7 +3,6 @@ const Task = require("../models/Task");
 const getTasks = async (req, res) => {
   try {
     const { search } = req.query;
-
     const filter = {};
 
     if (search && search.trim()) {
@@ -15,9 +14,7 @@ const getTasks = async (req, res) => {
       ];
     }
 
-    const tasks = await Task.find(filter).sort({
-      dueDate: 1,
-    });
+    const tasks = await Task.find(filter).sort({ dueDate: 1 });
 
     res.status(200).json({
       success: true,
@@ -34,19 +31,35 @@ const getTasks = async (req, res) => {
 
 const createTask = async (req, res) => {
   try {
-    const { title, description, dueDate, priority } = req.body;
+    const { title, description, date, startTime, endTime, dueDate, priority } =
+      req.body;
 
-    if (!title || !title.trim() || !dueDate) {
+    if (!title || !title.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Title and date/time are required",
+        message: "Task title is required",
+      });
+    }
+
+    // Use the new date and start time when supplied.
+    // Otherwise, keep compatibility with the old dueDate format.
+    const taskDate =
+      date && startTime ? new Date(`${date}T${startTime}`) : new Date(dueDate);
+
+    if (!taskDate || Number.isNaN(taskDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid task date and start time are required",
       });
     }
 
     const task = await Task.create({
       title,
       description,
-      dueDate,
+      date: date || "",
+      startTime: startTime || "",
+      endTime: endTime || "",
+      dueDate: taskDate,
       priority,
     });
 
@@ -64,7 +77,23 @@ const createTask = async (req, res) => {
 
 const updateTask = async (req, res) => {
   try {
-    const task = await Task.findByIdAndUpdate(req.params.id, req.body, {
+    const updates = { ...req.body };
+
+    // Keep dueDate synchronized when the new date/time fields are edited.
+    if (updates.date && updates.startTime) {
+      const taskDate = new Date(`${updates.date}T${updates.startTime}`);
+
+      if (Number.isNaN(taskDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid task date or start time",
+        });
+      }
+
+      updates.dueDate = taskDate;
+    }
+
+    const task = await Task.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true,
     });

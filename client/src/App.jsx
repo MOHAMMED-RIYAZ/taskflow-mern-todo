@@ -10,8 +10,9 @@ import {
   Settings,
   Bell,
 } from "lucide-react";
-import { format, addDays, startOfWeek, isSameDay, isSameWeek } from "date-fns";
 
+import { format, addDays, startOfWeek, isSameDay, isSameWeek } from "date-fns";
+import Welcome from "./Welcome";
 import {
   getTasks,
   createTask,
@@ -22,13 +23,17 @@ import {
 const emptyForm = {
   title: "",
   date: "",
-  time: "",
+  startTime: "",
+  endTime: "",
   description: "",
   priority: "Medium",
 };
 
 function App() {
   const [tasks, setTasks] = useState([]);
+  const [hasStarted, setHasStarted] = useState(
+    () => localStorage.getItem("taskflowStarted") === "true",
+  );
   const [search, setSearch] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [submitting, setSubmitting] = useState(false);
@@ -73,8 +78,9 @@ function App() {
 
     setForm({
       title: task.title,
-      date: format(taskDate, "yyyy-MM-dd"),
-      time: format(taskDate, "HH:mm"),
+      date: task.date || format(taskDate, "yyyy-MM-dd"),
+      startTime: task.startTime || format(taskDate, "HH:mm"),
+      endTime: task.endTime || "",
       description: task.description || "",
       priority: task.priority || "Medium",
     });
@@ -82,20 +88,29 @@ function App() {
     setShowModal(true);
     setSwipedTaskId(null);
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (submitting) return;
+
+    if (form.endTime <= form.startTime) {
+      setError("End time must be later than start time.");
+      return;
+    }
 
     try {
       setSubmitting(true);
       setError("");
 
       const payload = {
-        title: form.title,
+        title: form.title.trim(),
+        date: form.date,
+        startTime: form.startTime,
+        endTime: form.endTime,
         description: form.description,
         priority: form.priority,
-        dueDate: new Date(`${form.date}T${form.time}`).toISOString(),
+        dueDate: new Date(`${form.date}T${form.startTime}`).toISOString(),
       };
 
       if (editingTask) {
@@ -114,6 +129,7 @@ function App() {
       setSubmitting(false);
     }
   };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this task?")) return;
 
@@ -148,6 +164,7 @@ function App() {
 
   const handleTouchEnd = (e, taskId) => {
     const deltaX = e.changedTouches[0].clientX - touchStart.current.x;
+
     const deltaY = e.changedTouches[0].clientY - touchStart.current.y;
 
     if (Math.abs(deltaX) < Math.abs(deltaY)) return;
@@ -159,18 +176,18 @@ function App() {
     }
   };
 
-  // Date selector: Sunday through Saturday.
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+  // Monday through Sunday
+  const weekStart = startOfWeek(selectedDate, {
+    weekStartsOn: 1,
+  });
 
   const weekDates = Array.from({ length: 7 }, (_, index) =>
     addDays(weekStart, index),
   );
 
-  // Tasks belonging to the selected week.
+  // Tasks belonging to the selected week
   const tasksThisWeek = tasks.filter((task) =>
-    isSameWeek(new Date(task.dueDate), selectedDate, {
-      weekStartsOn: 1,
-    }),
+    isSameWeek(new Date(task.dueDate), selectedDate, { weekStartsOn: 1 }),
   );
 
   const completedThisWeek = tasksThisWeek.filter(
@@ -195,6 +212,16 @@ function App() {
   const sortedTasks = [...visibleTasks].sort(
     (a, b) => new Date(a.dueDate) - new Date(b.dueDate),
   );
+  if (!hasStarted) {
+    return (
+      <Welcome
+        onGetStarted={() => {
+          localStorage.setItem("taskflowStarted", "true");
+          setHasStarted(true);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f6f7fc] text-[#20243a] pb-28">
@@ -249,7 +276,6 @@ function App() {
         </div>
 
         {/* Date selector */}
-        {/* Date selector */}
         <div className="grid grid-cols-7 gap-1 mb-8">
           {weekDates.map((date) => {
             const active = isSameDay(date, selectedDate);
@@ -268,9 +294,11 @@ function App() {
                 }`}
               >
                 <span className="text-xs">{format(date, "EEE")}</span>
+
                 <span className="text-lg font-semibold mt-1">
                   {format(date, "dd")}
                 </span>
+
                 {active && (
                   <span className="w-1 h-1 rounded-full bg-white mt-1" />
                 )}
@@ -278,6 +306,7 @@ function App() {
             );
           })}
         </div>
+
         {/* Weekly summary cards */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-[#eef1ff] rounded-xl p-4 sm:p-5">
@@ -293,6 +322,7 @@ function App() {
               <span className="text-3xl font-bold">
                 {completedThisWeek.length}
               </span>
+
               <span className="text-xs text-gray-500">This Week</span>
             </div>
           </div>
@@ -310,6 +340,7 @@ function App() {
               <span className="text-3xl font-bold">
                 {pendingThisWeek.length}
               </span>
+
               <span className="text-xs text-gray-500">This Week</span>
             </div>
           </div>
@@ -319,6 +350,7 @@ function App() {
         <section className="mb-9">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-bold">Weekly Progress</h2>
+
             <span className="text-sm font-semibold text-[#4964eb]">
               {progress}%
             </span>
@@ -431,10 +463,19 @@ function App() {
                         )}
 
                         <p className="text-xs text-gray-400 mt-2">
-                          {format(
-                            new Date(task.dueDate),
-                            "dd MMM yyyy, hh:mm a",
-                          )}
+                          {format(new Date(task.dueDate), "dd MMM yyyy")}
+                          {" • "}
+                          {task.startTime
+                            ? format(
+                                new Date(`2000-01-01T${task.startTime}`),
+                                "hh:mm a",
+                              )
+                            : format(new Date(task.dueDate), "hh:mm a")}
+                          {task.endTime &&
+                            ` - ${format(
+                              new Date(`2000-01-01T${task.endTime}`),
+                              "hh:mm a",
+                            )}`}
                         </p>
 
                         <div className="flex items-center gap-3 mt-3">
@@ -497,6 +538,7 @@ function App() {
               </h2>
 
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
                 aria-label="Close form"
               >
@@ -505,9 +547,10 @@ function App() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Task title */}
               <div>
                 <label className="block text-sm text-gray-500 mb-2">
-                  Task title
+                  Task Title
                 </label>
 
                 <input
@@ -515,11 +558,17 @@ function App() {
                   maxLength={150}
                   placeholder="Enter task title"
                   value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      title: e.target.value,
+                    })
+                  }
                   className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
                 />
               </div>
 
+              {/* Date */}
               <div>
                 <label className="block text-sm text-gray-500 mb-2">Date</label>
 
@@ -527,22 +576,58 @@ function App() {
                   required
                   type="date"
                   value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      date: e.target.value,
+                    })
+                  }
                   className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm text-gray-500 mb-2">Time</label>
+              {/* Start and End Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    Start Time
+                  </label>
 
-                <input
-                  required
-                  type="time"
-                  value={form.time}
-                  onChange={(e) => setForm({ ...form, time: e.target.value })}
-                  className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
-                />
+                  <input
+                    required
+                    type="time"
+                    value={form.startTime}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        startTime: e.target.value,
+                      })
+                    }
+                    className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    End Time
+                  </label>
+
+                  <input
+                    required
+                    type="time"
+                    value={form.endTime}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        endTime: e.target.value,
+                      })
+                    }
+                    className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
+                  />
+                </div>
               </div>
+
+              {/* Description */}
               <div>
                 <label className="block text-sm text-gray-500 mb-2">
                   Description
@@ -562,6 +647,7 @@ function App() {
                 />
               </div>
 
+              {/* Priority */}
               <div>
                 <label className="block text-sm text-gray-500 mb-2">
                   Priority
@@ -570,7 +656,10 @@ function App() {
                 <select
                   value={form.priority}
                   onChange={(e) =>
-                    setForm({ ...form, priority: e.target.value })
+                    setForm({
+                      ...form,
+                      priority: e.target.value,
+                    })
                   }
                   className="w-full border border-gray-200 p-3 rounded-md outline-none focus:border-[#4964eb]"
                 >
@@ -580,6 +669,7 @@ function App() {
                 </select>
               </div>
 
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={submitting}

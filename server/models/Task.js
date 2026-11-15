@@ -13,6 +13,18 @@ const taskSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    date: {
+      type: String,
+      default: "",
+    },
+    startTime: {
+      type: String,
+      default: "",
+    },
+    endTime: {
+      type: String,
+      default: "",
+    },
     dueDate: {
       type: Date,
       required: [true, "Task date and time are required"],
