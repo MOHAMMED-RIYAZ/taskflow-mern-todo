@@ -37,9 +37,7 @@ const emptyForm = {
 function App() {
   const [tasks, setTasks] = useState([]);
 
-  const [hasStarted, setHasStarted] = useState(
-    () => localStorage.getItem("taskflowStarted") === "true",
-  );
+  const [hasStarted, setHasStarted] = useState(false);
 
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -251,7 +249,6 @@ function App() {
     return (
       <Welcome
         onGetStarted={() => {
-          localStorage.setItem("taskflowStarted", "true");
           setHasStarted(true);
         }}
       />
