@@ -63,6 +63,11 @@ function App() {
       const data = await getTasks(search);
 
       setTasks(data);
+
+      if (search.trim() && data.length === 1) {
+        setSelectedDate(new Date(data[0].dueDate));
+      }
+
       setError("");
     } catch (err) {
       setError("Unable to load tasks. Check your backend.");
@@ -70,7 +75,6 @@ function App() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (searchOpen) {
       searchInputRef.current?.focus();
@@ -464,6 +468,14 @@ function App() {
           ) : (
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               {sortedTasks.map((task) => {
+                const handleTaskClick = (task) => {
+                  if (search.trim()) {
+                    setSelectedDate(new Date(task.dueDate));
+                    setSearch("");
+                    setSearchOpen(false);
+                    setSwipedTaskId(null);
+                  }
+                };
                 const isSwiped = swipedTaskId === task._id;
                 const completed = task.status === "Completed";
 
@@ -506,7 +518,8 @@ function App() {
 
                       <div className="min-w-0 flex-1">
                         <h3
-                          className={`font-semibold text-base break-words ${
+                          onClick={() => handleTaskClick(task)}
+                          className={`font-semibold text-base break-words cursor-pointer ${
                             completed
                               ? "line-through text-gray-400"
                               : "text-[#20243a]"
